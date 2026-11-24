@@ -1,9 +1,11 @@
-# MienArch ARHP Compressor说明文档
+# ARHP Compressor说明文档
+Copyright (C) MienArch 2026 · 面包图书馆 2026
 
+许可证：GPL-3.0-or-later
 > 支持 Reed-Solomon 纠删码恢复数据、AES-256-GCM 加密与多分卷的跨格式压缩归档工具
 > 当前版本：**2.0.0.2** · GPL-3.0-or-later · Python 3.8+
 
-一个程序，四种格式：`.arh2`（Cauchy-MDS RS + 受保护中心目录）、`.arhp`（Vandermonde RS，v3 头保护）、`.zip`（deflate）、`.7z`（LZMA2）。图形界面与命令行双入口，内置 Windows 右键菜单集成。
+
 
 ---
 
@@ -18,7 +20,6 @@
 - [Windows 右键菜单](#windows-右键菜单)
 - [打包为可执行文件](#打包为可执行文件)
 - [兼容性说明](#兼容性说明)
-- [版本历史](#版本历史)
 - [许可证](#许可证)
 
 ---
@@ -28,10 +29,10 @@
 ### 归档格式
 | 格式 | 压缩算法 | 纠删码 | 中心目录 | 加密 | 说明 |
 |------|----------|--------|----------|------|------|
-| `.arh2` | zstd 0–22 级 | Cauchy-MDS RS（任意分片组合可恢复） | ✅ 受 RS 保护，可选加密 | AES-256-GCM | **推荐格式**，列目录走快路径 |
-| `.arhp` | zstd 0–22 级 | Vandermonde RS | ❌ | AES-256-GCM + 头 HMAC | 兼容 arhp 1.1.0.2 |
-| `.zip`  | deflate 0–9 级 | ❌ | ❌ | ❌（标准库限制） | 兼容所有压缩软件 |
-| `.7z`   | LZMA2 0–9 级 | ❌ | ❌ | AES-256（py7zr ≥ 0.20） | 高压缩率通用格式 |
+| `.arh2` | zstd 0–22 级 | Cauchy-MDS RS（任意分片组合可恢复） |  受 RS 保护，可选加密 | AES-256-GCM | **推荐格式**，列目录走快路径 |
+| `.arhp` | zstd 0–22 级 | Vandermonde RS | - | AES-256-GCM + 头 HMAC | 兼容 arhp 1.1.0.2 |
+| `.zip`  | deflate 0–9 级 | - | - | - | 兼容所有压缩软件 |
+| `.7z`   | LZMA2 0–9 级 | - | - | AES-256（py7zr ≥ 0.20） | 高压缩率通用格式 |
 
 ### 核心能力
 
@@ -45,7 +46,6 @@
 - **安全解压**：统一拒绝 `../`、绝对路径、Windows 盘符、重复成员名与文件/目录层级冲突；符号链接不跟随打包、链接目标越界即跳过；权限掩码收紧为 0o777，不恢复 setuid/setgid。
 - **符号链接保留**：`.arh2/.arhp/.zip` 均以链接本身存入归档（zip 以 Unix 模式位写入），解压时按链接还原。
 - **程序临时目录统一管理与清理**：所有中间产物集中在 `%LOCALAPPDATA%\MienArch\ARHP`（拒绝符号链接抢占路径），缓存清理只删本程序前缀条目。
-- **7-Zip Manager 风格 GUI**：内容树预览（名称/大小/压缩后/修改时间/属性/CRC/算法）、双击条目即用系统默认程序查看、选中条目部分解压。
 
 ---
 
@@ -59,13 +59,13 @@ pip install pyzstd cryptography PySide6 argon2-cffi py7zr
 |------|------|--------|
 | `pyzstd`（或 `zstandard`） | zstd 压缩 | `.arh2/.arhp` 创建失败 |
 | `cryptography` | AES-256-GCM / PBKDF2 | 加密功能不可用 |
-| `PySide6` | 图形界面 | 自动回退纯命令行 |
+| `PySide6` | 图形界面 | 动回退纯命令行 |
 | `argon2-cffi` | Argon2id 密钥派生 | 仅该加密方案不可用 |
 | `py7zr` | `.7z` 读写 | `.7z` 格式不可用 |
 
-> 程序自动加载同目录下的 `arhp_core.py` 核心库，无需安装；
+> 程序动加载同目录下的 `arhp_core.py` 核心库，无需安装；
 > 同目录的 `arhp_plugin.py` 存在时启用右键菜单集成（缺失不影响其他功能）；
-> 同目录放置 `ARHP.png` 即作为窗口与任务栏图标（打包为 onedir exe 时放 exe 旁即可）。
+
 
 ---
 
@@ -145,12 +145,12 @@ ARHP_PASSWORD="your-password" arhp extract backup.arh2
 ### .arh2（ARH2 v1，推荐）
 
 ```
-魔数 ARH2\x00\x01 │ JSON 头（header_crc 自校验）│ 数据块 │ RS 校验块
-│ 头分块 + 头校验块（RS 保护）│ 中心化目录（可选加密 + RS 保护）│ 自描述尾注 ARH2\x00\x02
+魔数 ARH2\x00\x01 │ JSON 头（header_crc 校验）│ 数据块 │ RS 校验块
+│ 头分块 + 头校验块（RS 保护）│ 中心化目录（可选加密 + RS 保护）│ 描述尾注 ARH2\x00\x02
 ```
 
 - **Cauchy-MDS 校验矩阵**：任意可用分片组合均可恢复，优于只能逐块顺序修复的方案；
-- **受保护的中心化目录**：列目录走快路径，无需解压载荷；目录与头使用同一套 RS 保护布局（HB/HP 分块 + 逐块 CRC + 自描述尾注），损坏可自动修复；
+- **受保护的中心化目录**：列目录走快路径，无需解压载荷；目录与头使用同一套 RS 保护布局（HB/HP 分块 + 逐块 CRC + 描述尾注），损坏可动修复；
 - 读取端与旧版 **arh2 1.0.0.2** 完全双向兼容。
 
 ### .arhp（ARHP v2/v3）
@@ -218,9 +218,9 @@ pyinstaller --noconfirm --windowed --onefile --name arhp \
 
 | 方向 | 兼容性 |
 |------|--------|
-| 本版创建的 `.arhp` → arhp **1.1.0.2** 读取 | ✅（Vandermonde RS + 扁平尾注 + 可选头 HMAC） |
-| 本版创建的 `.arh2` → arh2 **1.0.0.2** 读取 | ✅（Cauchy-MDS，无 header_mac） |
-| 旧版 arhp 1.1.0.2 / arh2 1.0.0.2 归档 → 本版读取 | ✅（含 v2 无尾注 .arhp 旧格式） |
+| 本版创建的 `.arhp` → arhp **1.1.0.2** 读取 | Vandermonde RS + 扁平尾注 + 可选头 HMAC |
+| 本版创建的 `.arh2` → arh2 **1.0.0.2** 读取 | Cauchy-MDS，无 header_mac |
+| 旧版 arhp 1.1.0.2 / arh2 1.0.0.2 归档 → 本版读取 | 含 v2 无尾注 .arhp 旧格式 |
 | nonce 格式 | 读取端同时接受 v1.0.2.3+（8 字节前缀 + 4 字节序号）与更早（4 字节前缀 + 8 字节序号） |
 
 ---
